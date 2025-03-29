@@ -1,0 +1,15 @@
+{
+  "executionEnvironments": [
+    {
+      "root": "test-work-pavepo",
+      "python.analysis.lineLength": 79
+    }
+  ],
+  "disableLanguageServices": false,
+  "disableOrganizeImports": true,
+  "reportGeneralTypeIssues": true,
+  "reportMissingImports": true,
+  "reportUndefinedVariable": true,
+  "reportUnusedImport": false,
+  "reportUnusedVariable": false
+}

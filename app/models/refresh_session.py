@@ -13,10 +13,11 @@ class RefreshSessionModel(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
-    refresh_token: Mapped[str] = mapped_column(String)
+    refresh_token: Mapped[str] = mapped_column(String, index=True)
     expire_in: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=text("(now() AT TIME ZONE 'utc') + interval '15 minutes'"),
+        onupdate=text("(now() AT TIME ZONE 'utc') + interval '15 minutes'"),
     )
 
 
@@ -31,5 +32,9 @@ class RefreshSessionCreateDTO(BaseModel):
 
 
 class RefreshSessionResponseDTO(BaseModel):
-    access: str
-    refresh: str
+    access_token: str
+    refresh_token: str
+
+
+class RefreshSessionUpdateDTO(BaseModel):
+    refresh_token: str

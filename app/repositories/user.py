@@ -27,6 +27,10 @@ class BaseUserRepository(ABC):
     async def update_info(self, *, user_info: UserUpdateInfoDTO) -> UserModel:
         pass
 
+    @abstractmethod
+    async def get_by_id(self, *, id: int) -> UserModel | None:
+        pass
+
 
 class UserRepository(BaseUserRepository):
     model = UserModel
@@ -53,6 +57,15 @@ class UserRepository(BaseUserRepository):
             user = await self.session.scalar(statement)
         except Exception as e:
             logger.error("Database Error: %s", e)
+            raise InternalException
+
+        return user
+
+    async def get_by_id(self, *, id: int) -> UserModel | None:
+        statement = select(self.model).where(self.model.id == id)
+        try:
+            user = await self.session.scalar(statement)
+        except Exception as e:
             raise InternalException
 
         return user

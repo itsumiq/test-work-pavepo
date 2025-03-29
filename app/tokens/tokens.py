@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta, timezone
 from logging import getLogger
-from dataclasses import dataclass
 from uuid import uuid4
 
 from jwt import encode
@@ -8,10 +7,6 @@ from jwt import encode
 from app.settings.config import config
 
 logger = getLogger(__name__)
-
-# @dataclass
-# TokenPayload:
-#
 
 
 def create_refresh_token() -> str:

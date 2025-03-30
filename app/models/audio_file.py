@@ -30,3 +30,13 @@ class AudioFileCreateRequestDTO(AudioFileSaveLocalDTO):
 class AudioFileCreateResponseDTO(BaseModel):
     filename_original: str
     filename_unique: str
+
+
+class AudioFileGetDTO(BaseModel):
+    filepath: str
+    filename_original: str
+
+
+class AudioFilesGetResponseDTO(BaseModel):
+    user_id: int
+    files: list[AudioFileGetDTO]

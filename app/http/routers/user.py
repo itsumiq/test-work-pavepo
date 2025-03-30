@@ -15,7 +15,11 @@ from app.http.deps import (
     TokenPayloadDep,
     UserServiceDep,
 )
-from app.models.audio_file import AudioFileCreateRequestDTO, AudioFileCreateResponseDTO
+from app.models.audio_file import (
+    AudioFileCreateRequestDTO,
+    AudioFileCreateResponseDTO,
+    AudioFilesGetResponseDTO,
+)
 from app.models.refresh_session import RefreshSessionRequestDTO
 from app.models.user import (
     UserDeleteResponseDTO,
@@ -174,3 +178,28 @@ async def upload_audio_file(
         )
 
     return file_response
+
+
+@user_router.get("/audio/{user_id}")
+async def get_user_audio_files(
+    user_id: int,
+    token_payload: TokenPayloadDep,
+    audio_file_service: AudioFileServiceDep,
+) -> AudioFilesGetResponseDTO:
+    if not token_payload["is_superuser"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"msg": "Not enough permissions to perform this action"},
+        )
+
+    try:
+        audio_files_response = await audio_file_service.get_all_by_user_id(
+            user_id=user_id
+        )
+    except InternalException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"msg": "Internal server error"},
+        )
+
+    return audio_files_response

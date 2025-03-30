@@ -28,6 +28,10 @@ class BaseAudioFileRepository(ABC):
     ) -> AudioFileModel | None:
         pass
 
+    @abstractmethod
+    async def get_all_by_user_id(self, *, user_id: int) -> list[AudioFileModel]:
+        pass
+
 
 class AudioFileRepository(BaseAudioFileRepository):
     model = AudioFileModel
@@ -72,3 +76,14 @@ class AudioFileRepository(BaseAudioFileRepository):
             raise InternalException
 
         return audio_file
+
+    async def get_all_by_user_id(self, *, user_id: int) -> list[AudioFileModel]:
+        statement = select(self.model).where(self.model.user_id == user_id)
+        try:
+            result = await self.session.scalars(statement)
+            audio_files = list(result.all())
+        except Exception as e:
+            logger.error("Database select error: %s", e)
+            raise InternalException
+
+        return audio_files

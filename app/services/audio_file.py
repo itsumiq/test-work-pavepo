@@ -14,7 +14,9 @@ from app.exceptions import (
 from app.models.audio_file import (
     AudioFileCreateRequestDTO,
     AudioFileCreateResponseDTO,
+    AudioFileGetDTO,
     AudioFileSaveLocalDTO,
+    AudioFilesGetResponseDTO,
 )
 from app.repositories.uow import BaseUnitOfWork
 from app.settings.config import config
@@ -38,6 +40,10 @@ class BaseAudioFileService(ABC):
     async def save_db(
         self, *, file_info: AudioFileCreateRequestDTO
     ) -> AudioFileCreateResponseDTO:
+        pass
+
+    @abstractmethod
+    async def get_all_by_user_id(self, *, user_id) -> AudioFilesGetResponseDTO:
         pass
 
 
@@ -109,3 +115,16 @@ class AudioFileService(BaseAudioFileService):
         return AudioFileCreateResponseDTO.model_validate(
             audio_file, from_attributes=True
         )
+
+    async def get_all_by_user_id(self, *, user_id) -> AudioFilesGetResponseDTO:
+        async with self.uow:
+            audio_file_repo = self.uow.get_audio_file_repo()
+            audio_files = await audio_file_repo.get_all_by_user_id(user_id=user_id)
+
+        audio_files_response: list[AudioFileGetDTO] = []
+        for audio_file in audio_files:
+            audio_files_response.append(
+                AudioFileGetDTO.model_validate(audio_file, from_attributes=True)
+            )
+
+        return AudioFilesGetResponseDTO(user_id=user_id, files=audio_files_response)

@@ -21,6 +21,7 @@ services:
     build: ./
     volumes:
       - ./app:/app/app/
+      - ./files:/app/files/
     env_file:
       - ./.env
     ports:

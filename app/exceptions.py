@@ -4,3 +4,15 @@ class InternalException(Exception):
 
 class AuthException(Exception):
     pass
+
+
+class BadRequestException(Exception):
+    pass
+
+
+class BadMediaType(Exception):
+    pass
+
+
+class ConflictException(Exception):
+    pass

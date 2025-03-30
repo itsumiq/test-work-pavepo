@@ -3,6 +3,7 @@ from typing import Self
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.repositories.audio_file import AudioFileRepository, BaseAudioFileRepository
 from app.repositories.refresh_session import (
     BaseRefreshSessionRepository,
     RefreshSessionRepository,
@@ -28,6 +29,10 @@ class BaseUnitOfWork(ABC):
         pass
 
     @abstractmethod
+    def get_audio_file_repo(self) -> BaseAudioFileRepository:
+        pass
+
+    @abstractmethod
     async def commit(self) -> None:
         pass
 
@@ -38,6 +43,7 @@ class UnitOfWork(BaseUnitOfWork):
 
         self.user_repo = UserRepository(session=self.session)
         self.refresh_session = RefreshSessionRepository(session=self.session)
+        self.audio_file_repo = AudioFileRepository(session=self.session)
 
         return self
 
@@ -50,6 +56,9 @@ class UnitOfWork(BaseUnitOfWork):
 
     def get_refresh_session_repo(self) -> BaseRefreshSessionRepository:
         return self.refresh_session
+
+    def get_audio_file_repo(self) -> BaseAudioFileRepository:
+        return self.audio_file_repo
 
     async def commit(self) -> None:
         await self.session.commit()

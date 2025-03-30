@@ -1,3 +1,4 @@
+from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -17,6 +18,17 @@ class Config(BaseSettings):
     YANDEX_OAUTH_AUTHORIZE_URL: str = "https://oauth.yandex.ru/authorize"
     YANDEX_API_USERINFO_URL: str = "https://login.yandex.ru/info"
 
+    ALLOWED_AUDIO_CONTENT_TYPES: list[str] = [
+        "audio/mpeg",
+        "audio/wav",
+        "audio/ogg",
+        "audio/aac",
+        "audio/x-m4a",
+    ]
+    ALLOWED_AUDIO_EXTENSIONS: list[str] = [".mp3", ".wav", ".ogg", ".aac", ".m4a"]
+
+    AUDIO_STORAGE_PATH_RELATIVE: str = "./files/audio"
+
     JWT_SECRET_KEY: str = Field(default=...)
 
     API_BASE_URL: str = Field(default=...)
@@ -28,6 +40,10 @@ class Config(BaseSettings):
     @property
     def DB_URL(self) -> str:
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_DATABASE}"
+
+    @property
+    def AUDIO_STORAGE_PATH_ABSOLUTE(self) -> Path:
+        return Path(self.AUDIO_STORAGE_PATH_RELATIVE).resolve()
 
 
 config = Config()

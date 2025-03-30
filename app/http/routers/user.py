@@ -1,8 +1,20 @@
-from fastapi import APIRouter, HTTPException, Response, status
+from typing import Annotated
+from fastapi import APIRouter, Form, HTTPException, Response, UploadFile, status
 from fastapi.responses import RedirectResponse
 
-from app.exceptions import InternalException
-from app.http.deps import RefreshSessionServiceDep, UserServiceDep
+from app.exceptions import (
+    BadMediaType,
+    BadRequestException,
+    ConflictException,
+    InternalException,
+)
+from app.http.deps import (
+    AudioFileServiceDep,
+    RefreshSessionServiceDep,
+    TokenPayloadDep,
+    UserServiceDep,
+)
+from app.models.audio_file import AudioFileCreateRequestDTO, AudioFileCreateResponseDTO
 from app.models.refresh_session import RefreshSessionRequestDTO
 from app.settings.config import config
 
@@ -37,3 +49,46 @@ async def get_yandex_callback(
 
     response.headers["Authorization"] = f"Bearer {tokens.access_token}"
     return {"refresh_token": tokens.refresh_token}
+
+
+@user_router.post("/audio")
+async def upload_audio_file(
+    file: UploadFile,
+    custom_filename: Annotated[str, Form()],
+    token_payload: TokenPayloadDep,
+    audio_file_service: AudioFileServiceDep,
+) -> AudioFileCreateResponseDTO:
+    try:
+        localfile = await audio_file_service.save_local(
+            file=file, filename_custom=custom_filename, user_id=token_payload["id"]
+        )
+        file_response = await audio_file_service.save_db(
+            file_info=AudioFileCreateRequestDTO(
+                filepath=localfile.filepath,
+                filename_unique=localfile.filename_unique,
+                user_id=token_payload["id"],
+                filename_original=custom_filename,
+            )
+        )
+    except InternalException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"msg": "Internal server error"},
+        )
+    except ConflictException:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"msg": "Filename already exists"},
+        )
+    except BadRequestException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"msg": "Filename missing"},
+        )
+    except BadMediaType:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail={"msg": "Unsupported media type"},
+        )
+
+    return file_response

@@ -3,11 +3,15 @@ from logging import getLogger
 
 import httpx
 
-from app.exceptions import InternalException
+from app.exceptions import InternalException, NotFoundException
 from app.models.user import (
     UserAuthenticatedResponseDTO,
     UserCreateDTO,
-    UserUpdateInfoDTO,
+    UserDeleteResponseDTO,
+    UserGetResponseDTO,
+    UserUpdateDTO,
+    UserUpdateRequestDTO,
+    UserUpdateResponseDTO,
 )
 from app.repositories.uow import BaseUnitOfWork
 from app.settings.config import config
@@ -26,6 +30,20 @@ class BaseUserService(ABC):
     ) -> UserAuthenticatedResponseDTO:
         pass
 
+    @abstractmethod
+    async def get_one_by_id(self, *, id: int) -> UserGetResponseDTO:
+        pass
+
+    @abstractmethod
+    async def update_one_by_id(
+        self, *, user: UserUpdateRequestDTO
+    ) -> UserUpdateResponseDTO:
+        pass
+
+    @abstractmethod
+    async def delete_one_by_id(self, *, id: int) -> UserDeleteResponseDTO:
+        pass
+
 
 class UserService:
     def __init__(self, uow: BaseUnitOfWork):
@@ -42,8 +60,8 @@ class UserService:
         }
 
         try:
+            # get tokens
             async with httpx.AsyncClient() as client:
-                # get tokens
                 tokens_response = await client.post(
                     url=config.YANDEX_OAUTH_TOKEN_URL, data=data_token_request
                 )
@@ -73,15 +91,15 @@ class UserService:
         # check user in storage
         async with self.uow:
             user_repo = self.uow.get_user_repo()
-            user_result = await user_repo.get_by_yandex_id(yandex_id=yandex_id)
+            user_result = await user_repo.get_one_by_yandex_id(yandex_id=yandex_id)
 
             if user_result:
                 if (
                     username != user_result.username
                     or phone_number != user_result.phone_number
                 ):
-                    user_updated = await user_repo.update_info(
-                        user_info=UserUpdateInfoDTO(
+                    user_updated = await user_repo.update_one_by_yandex_id(
+                        user=UserUpdateDTO(
                             username=username,
                             phone_number=phone_number,
                             yandex_id=yandex_id,
@@ -97,7 +115,7 @@ class UserService:
                     )
 
             user_created = await user_repo.create_one(
-                user_info=UserCreateDTO(
+                user=UserCreateDTO(
                     username=username,
                     phone_number=phone_number,
                     yandex_id=yandex_id,
@@ -108,3 +126,37 @@ class UserService:
             return UserAuthenticatedResponseDTO.model_validate(
                 user_created, from_attributes=True
             )
+
+    async def get_one_by_id(self, *, id: int) -> UserGetResponseDTO:
+        async with self.uow:
+            user_repo = self.uow.get_user_repo()
+            user = await user_repo.get_one_by_id(id=id)
+
+        if not user:
+            raise NotFoundException
+
+        return UserGetResponseDTO.model_validate(user, from_attributes=True)
+
+    async def update_one_by_id(
+        self, *, user: UserUpdateRequestDTO
+    ) -> UserUpdateResponseDTO:
+        async with self.uow:
+            user_repo = self.uow.get_user_repo()
+            user_updated = await user_repo.update_one_by_id(user=user)
+            await self.uow.commit()
+
+        if not user_updated:
+            raise NotFoundException
+
+        return UserUpdateResponseDTO.model_validate(user_updated, from_attributes=True)
+
+    async def delete_one_by_id(self, *, id: int) -> UserDeleteResponseDTO:
+        async with self.uow:
+            user_repo = self.uow.get_user_repo()
+            id_deleted = await user_repo.delete_one_by_id(id=id)
+            await self.uow.commit()
+
+        if not id_deleted:
+            raise NotFoundException
+
+        return UserDeleteResponseDTO(id=id_deleted)

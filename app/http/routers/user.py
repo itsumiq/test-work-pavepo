@@ -7,6 +7,7 @@ from app.exceptions import (
     BadRequestException,
     ConflictException,
     InternalException,
+    NotFoundException,
 )
 from app.http.deps import (
     AudioFileServiceDep,
@@ -16,9 +17,90 @@ from app.http.deps import (
 )
 from app.models.audio_file import AudioFileCreateRequestDTO, AudioFileCreateResponseDTO
 from app.models.refresh_session import RefreshSessionRequestDTO
+from app.models.user import (
+    UserDeleteResponseDTO,
+    UserGetResponseDTO,
+    UserUpdateRequestDTO,
+)
 from app.settings.config import config
 
 user_router = APIRouter(prefix="/users", tags=["Users"])
+
+
+@user_router.patch("")
+async def update_user_by_id(
+    user: UserUpdateRequestDTO,
+    user_service: UserServiceDep,
+    token_payload: TokenPayloadDep,
+):
+    if not token_payload["is_superuser"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"msg": "Not enough permissions to perform this action"},
+        )
+
+    try:
+        user_response = await user_service.update_one_by_id(user=user)
+    except InternalException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"msg": "Internal server error"},
+        )
+    except NotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail={"msg": "User not found"}
+        )
+
+    return user_response
+
+
+@user_router.get("/{user_id}")
+async def get_user_by_id(
+    user_id: int, user_service: UserServiceDep, token_payload: TokenPayloadDep
+) -> UserGetResponseDTO:
+    if not token_payload["is_superuser"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"msg": "Not enough permissions to perform this action"},
+        )
+
+    try:
+        user_response = await user_service.get_one_by_id(id=user_id)
+    except InternalException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"msg": "Internal server error"},
+        )
+    except NotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail={"msg": "User not found"}
+        )
+
+    return user_response
+
+
+@user_router.delete("/{user_id}")
+async def delete_user_by_id(
+    user_id: int, user_service: UserServiceDep, token_payload: TokenPayloadDep
+) -> UserDeleteResponseDTO:
+    if not token_payload["is_superuser"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"msg": "Not enough permissions to perform this action"},
+        )
+    try:
+        user_response = await user_service.delete_one_by_id(id=user_id)
+    except InternalException:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"msg": "Internal server error"},
+        )
+    except NotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail={"msg": "User not found"}
+        )
+
+    return user_response
 
 
 @user_router.get("/yandex/login")
